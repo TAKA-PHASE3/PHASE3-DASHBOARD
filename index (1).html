@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>HVAC Expansion Project — Dashboard</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0f14;--surface:#121820;--surface2:#1a2330;--border:#1e2d3d;--border2:#253545;
+  --accent:#00c2ff;--accent2:#0078b8;--amber:#f5a623;--green:#22d98f;--red:#ff4d6d;
+  --muted:#4a6175;--text:#c8daea;--text-dim:#6e8a9e;--text-bright:#e8f4ff;
+  --font-mono:'Courier New',Courier,monospace;--font-head:Georgia,'Times New Roman',serif;
+  --glow:0 0 18px rgba(0,194,255,.25);--glow-sm:0 0 8px rgba(0,194,255,.18);
+  --edit-ring:0 0 0 2px rgba(0,194,255,.5);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-mono);font-size:13px;line-height:1.6;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.07) 2px,rgba(0,0,0,.07) 4px)}
+
+/* ── TOPBAR ─────────────────────────────────── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:54px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.logo-mark{width:30px;height:30px;border:2px solid var(--accent);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;color:var(--accent);box-shadow:var(--glow-sm)}
+.project-title{font-family:var(--font-head);font-size:15px;color:var(--text-bright)}
+.project-title span{color:var(--accent)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.live-badge{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--green);letter-spacing:1.5px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(34,217,143,.4)}50%{opacity:.8;box-shadow:0 0 0 5px rgba(34,217,143,0)}}
+.current-date{color:var(--text-dim);font-size:10px}
+
+/* ── EDIT TOGGLE ────────────────────────────── */
+.edit-toggle{display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 14px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);font:inherit;font-size:11px;color:var(--text-dim);transition:all .2s;letter-spacing:.5px}
+.edit-toggle:hover{border-color:var(--accent2);color:var(--text)}
+.edit-toggle.active{border-color:var(--accent);color:var(--accent);background:rgba(0,194,255,.08);box-shadow:var(--glow-sm)}
+.edit-indicator{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background .2s}
+.edit-toggle.active .edit-indicator{background:var(--accent)}
+
+/* ── TOOLBAR ─────────────────────────────────── */
+.toolbar{display:none;align-items:center;gap:8px;padding:8px 24px;background:rgba(0,194,255,.05);border-bottom:1px solid rgba(0,194,255,.15);flex-wrap:wrap}
+.toolbar.visible{display:flex}
+.toolbar-label{font-size:10px;color:var(--accent);letter-spacing:1.5px;margin-right:4px}
+.tbtn{padding:4px 12px;font:inherit;font-size:11px;border:1px solid var(--border2);background:var(--surface2);color:var(--text-dim);border-radius:3px;cursor:pointer;transition:all .15s}
+.tbtn:hover{border-color:var(--accent2);color:var(--text)}
+.tbtn.danger:hover{border-color:var(--red);color:var(--red)}
+.tbtn.success{border-color:var(--green);color:var(--green)}
+.tbtn.success:hover{background:rgba(34,217,143,.1)}
+.toolbar-sep{width:1px;height:20px;background:var(--border2);margin:0 4px}
+
+/* ── MAIN ────────────────────────────────────── */
+.main{flex:1;padding:20px 24px 40px;display:flex;flex-direction:column;gap:20px}
+
+/* ── PHASE BANNER ────────────────────────────── */
+.phase-banner{background:linear-gradient(135deg,#0d1c2b,#0b1825);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:6px;padding:16px 22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}
+.phase-info h2{font-family:var(--font-head);font-size:19px;color:var(--text-bright);margin-bottom:3px}
+.phase-info p{color:var(--text-dim);font-size:11px}
+.phase-meta{display:flex;gap:28px;flex-wrap:wrap}
+.meta-item label{display:block;font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px}
+.meta-item span{font-size:14px;color:var(--accent);font-weight:bold}
+
+/* ── STAT GRID ───────────────────────────────── */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;position:relative;overflow:hidden;transition:border-color .2s,box-shadow .2s}
+.stat-card:hover{border-color:var(--accent2);box-shadow:var(--glow-sm)}
+.stat-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px}
+.stat-card.blue::after{background:var(--accent)}.stat-card.amber::after{background:var(--amber)}
+.stat-card.green::after{background:var(--green)}.stat-card.red::after{background:var(--red)}
+.stat-label{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:7px}
+.stat-value{font-size:26px;font-weight:bold;color:var(--text-bright);line-height:1}
+.stat-sub{font-size:10px;color:var(--text-dim);margin-top:4px}
+.stat-value.amber{color:var(--amber)}.stat-value.green{color:var(--green)}.stat-value.red{color:var(--red)}.stat-value.blue{color:var(--accent)}
+
+/* ── TWO-COL ─────────────────────────────────── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:880px){.two-col{grid-template-columns:1fr}}
+
+/* ── PANEL ───────────────────────────────────── */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.panel-title{font-size:10px;color:var(--text-bright);letter-spacing:2px;text-transform:uppercase}
+.panel-badge{font-size:9px;padding:2px 7px;border-radius:20px;letter-spacing:1px}
+.badge-blue{background:rgba(0,194,255,.12);color:var(--accent);border:1px solid rgba(0,194,255,.3)}
+.badge-amber{background:rgba(245,166,35,.12);color:var(--amber);border:1px solid rgba(245,166,35,.3)}
+.badge-green{background:rgba(34,217,143,.12);color:var(--green);border:1px solid rgba(34,217,143,.3)}
+.badge-red{background:rgba(255,77,109,.12);color:var(--red);border:1px solid rgba(255,77,109,.3)}
+
+/* ── EDITABLE FIELD ──────────────────────────── */
+[data-editable]{cursor:default;border-radius:2px;transition:background .15s,box-shadow .15s}
+body.edit-mode [data-editable]{cursor:text;background:rgba(0,194,255,.05);box-shadow:0 0 0 1px rgba(0,194,255,.2);border-radius:2px}
+body.edit-mode [data-editable]:hover{background:rgba(0,194,255,.1);box-shadow:var(--edit-ring)}
+[data-editable]:focus{outline:none;background:rgba(0,194,255,.12) !important;box-shadow:var(--edit-ring) !important}
+
+/* ── PROGRESS CONTROL ────────────────────────── */
+.prog-wrap{display:flex;align-items:center;gap:8px}
+.prog-bar-bg{flex:1;height:20px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;overflow:hidden;position:relative}
+.prog-bar-fill{height:100%;border-radius:2px;display:flex;align-items:center;padding-left:7px;font-size:10px;color:rgba(255,255,255,.7);transition:width .4s ease}
+.prog-bar-fill.active{background:linear-gradient(90deg,var(--accent2),var(--accent))}
+.prog-bar-fill.done{background:linear-gradient(90deg,#1a6b45,var(--green))}
+.prog-bar-fill.future{background:var(--surface2);border:1px dashed var(--border2)}
+.prog-pct{font-size:11px;color:var(--text-dim);text-align:right;min-width:32px}
+.prog-btn{display:none;width:22px;height:22px;border:1px solid var(--border2);background:var(--surface2);color:var(--text-dim);border-radius:3px;font:inherit;font-size:13px;cursor:pointer;transition:all .15s;align-items:center;justify-content:center}
+.prog-btn:hover{border-color:var(--accent);color:var(--accent)}
+body.edit-mode .prog-btn{display:flex}
+
+/* ── MILESTONE ───────────────────────────────── */
+.milestone-list{}
+.milestone-row{display:grid;grid-template-columns:22px 1fr 90px 85px 28px;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);transition:background .15s}
+.milestone-row:last-child{border-bottom:none}
+.milestone-row:hover{background:var(--surface2)}
+.ms-icon{font-size:13px;color:var(--text-dim)}
+.ms-name{font-size:12px;color:var(--text-bright)}
+.ms-sub{font-size:10px;color:var(--text-dim)}
+.ms-date{font-size:10px;color:var(--text-dim)}
+.ms-status{font-size:10px;padding:3px 7px;border-radius:3px;text-align:center;white-space:nowrap;cursor:pointer}
+.ms-status.in-progress{background:rgba(0,194,255,.1);color:var(--accent)}
+.ms-status.completed{background:rgba(34,217,143,.1);color:var(--green)}
+.ms-status.upcoming{background:rgba(255,255,255,.05);color:var(--muted)}
+.ms-status.at-risk{background:rgba(255,77,109,.1);color:var(--red)}
+.del-btn{display:none;width:22px;height:22px;border:none;background:none;color:var(--muted);cursor:pointer;font-size:15px;align-items:center;justify-content:center;border-radius:3px;transition:all .15s}
+.del-btn:hover{color:var(--red);background:rgba(255,77,109,.1)}
+body.edit-mode .del-btn{display:flex}
+
+/* ── SCOPE ───────────────────────────────────── */
+.scope-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)}
+.scope-item{background:var(--surface);padding:14px 16px;transition:background .15s;position:relative}
+.scope-item:hover{background:var(--surface2)}
+.scope-item-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.scope-name{font-size:12px;color:var(--text-bright)}
+.scope-pct{font-size:17px;font-weight:bold}
+.scope-bar-bg{height:4px;background:var(--surface2);border-radius:2px;overflow:visible;margin-bottom:5px;position:relative}
+.scope-bar-fill{height:100%;border-radius:2px;transition:width .4s}
+.scope-meta{font-size:10px;color:var(--text-dim)}
+.scope-del{display:none;position:absolute;top:8px;right:8px;width:18px;height:18px;border:none;background:none;color:var(--muted);cursor:pointer;font-size:13px;align-items:center;justify-content:center;border-radius:2px}
+.scope-del:hover{color:var(--red)}
+body.edit-mode .scope-del{display:flex}
+
+/* ── RISK ────────────────────────────────────── */
+.risk-list{}
+.risk-row{display:grid;grid-template-columns:8px 1fr 70px 70px 28px;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border);transition:background .15s}
+.risk-row:last-child{border-bottom:none}
+.risk-row:hover{background:var(--surface2)}
+.risk-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.risk-name{font-size:12px;color:var(--text)}
+.risk-sub{font-size:10px;color:var(--text-dim);margin-top:1px}
+.risk-impact{font-size:10px;color:var(--text-dim)}
+.risk-level{font-size:10px;padding:2px 7px;border-radius:3px;text-align:center;cursor:pointer;white-space:nowrap}
+.risk-level.high{background:rgba(255,77,109,.15);color:var(--red)}
+.risk-level.medium{background:rgba(245,166,35,.15);color:var(--amber)}
+.risk-level.low{background:rgba(34,217,143,.15);color:var(--green)}
+
+/* ── BUDGET ──────────────────────────────────── */
+.budget-body{padding:16px}
+.budget-row{display:grid;grid-template-columns:1fr 80px 80px 60px 28px;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
+.budget-row:last-child{border-bottom:none}
+.budget-row.header{color:var(--muted);font-size:9px;letter-spacing:1px;text-transform:uppercase;padding-bottom:7px}
+.budget-cat{font-size:11px;color:var(--text)}
+.budget-num{font-size:11px;text-align:right}
+.budget-num.spent{color:var(--amber)}.budget-num.allocated{color:var(--text-dim)}
+.budget-spark{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.budget-spark-fill{height:100%;border-radius:3px;background:var(--accent2);transition:width .4s}
+.budget-spark-fill.over{background:var(--red)}
+
+/* ── TEAM ────────────────────────────────────── */
+.team-list{}
+.team-row{display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid var(--border);transition:background .15s}
+.team-row:last-child{border-bottom:none}
+.team-row:hover{background:var(--surface2)}
+.team-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;flex-shrink:0}
+.team-info{flex:1}
+.team-name{font-size:12px;color:var(--text-bright)}
+.team-role{font-size:10px;color:var(--text-dim)}
+.team-org{font-size:10px;color:var(--muted);min-width:80px;text-align:right}
+
+/* ── LOG ─────────────────────────────────────── */
+.log-body{padding:10px 16px;max-height:280px;overflow-y:auto}
+.log-body::-webkit-scrollbar{width:3px}
+.log-body::-webkit-scrollbar-track{background:var(--surface)}
+.log-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.log-entry{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)}
+.log-entry:last-child{border-bottom:none}
+.log-time{font-size:10px;color:var(--muted);width:72px;flex-shrink:0;padding-top:2px}
+.log-tag{font-size:9px;padding:1px 5px;border-radius:2px;height:fit-content;flex-shrink:0;cursor:pointer;letter-spacing:.5px}
+.log-tag.design{background:rgba(0,194,255,.1);color:var(--accent)}
+.log-tag.admin{background:rgba(245,166,35,.1);color:var(--amber)}
+.log-tag.scope{background:rgba(34,217,143,.1);color:var(--green)}
+.log-tag.risk{background:rgba(255,77,109,.1);color:var(--red)}
+.log-msg{font-size:11px;color:var(--text-dim);flex:1}
+
+/* ── RINGS ───────────────────────────────────── */
+.ring-row{display:flex;gap:20px;padding:16px;flex-wrap:wrap}
+.ring-item{display:flex;flex-direction:column;align-items:center;gap:5px}
+.ring-item svg{transform:rotate(-90deg)}
+.ring-label{font-size:10px;color:var(--text-dim);text-align:center;max-width:75px}
+.ring-val{font-size:11px;color:var(--text-bright);font-weight:bold}
+
+/* ── TIMELINE PHASE ──────────────────────────── */
+.timeline-wrap{padding:18px}
+.t-phase{display:grid;grid-template-columns:120px 1fr;align-items:center;gap:12px;margin-bottom:12px}
+.t-label{font-size:11px;color:var(--text-dim)}
+
+/* ── MODAL ───────────────────────────────────── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:24px;width:420px;max-width:94vw}
+.modal h3{font-family:var(--font-head);font-size:16px;color:var(--text-bright);margin-bottom:16px}
+.modal label{display:block;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;margin-top:12px}
+.modal input,.modal select,.modal textarea{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);font:inherit;font-size:12px;padding:8px 10px;outline:none;transition:border-color .15s}
+.modal input:focus,.modal select,.modal textarea:focus{border-color:var(--accent)}
+.modal select{cursor:pointer}
+.modal textarea{resize:vertical;min-height:70px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.mbtn{padding:7px 18px;font:inherit;font-size:12px;border-radius:4px;cursor:pointer;transition:all .15s}
+.mbtn.primary{background:var(--accent2);border:1px solid var(--accent);color:#fff}
+.mbtn.primary:hover{background:var(--accent)}
+.mbtn.secondary{background:none;border:1px solid var(--border2);color:var(--text-dim)}
+.mbtn.secondary:hover{border-color:var(--text-dim);color:var(--text)}
+
+/* ── ADD ROW BUTTONS ─────────────────────────── */
+.add-row-btn{display:none;width:100%;padding:8px;border:1px dashed var(--border2);background:none;color:var(--muted);font:inherit;font-size:11px;cursor:pointer;transition:all .2s;letter-spacing:.5px}
+.add-row-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,194,255,.05)}
+body.edit-mode .add-row-btn{display:block}
+
+/* ── SAVE FLASH ──────────────────────────────── */
+.save-flash{position:fixed;bottom:20px;right:24px;background:rgba(34,217,143,.15);border:1px solid var(--green);color:var(--green);padding:8px 18px;border-radius:4px;font-size:11px;letter-spacing:.5px;opacity:0;transform:translateY(8px);transition:all .3s;z-index:300;pointer-events:none}
+.save-flash.show{opacity:1;transform:translateY(0)}
+
+/* ── FOOTER ──────────────────────────────────── */
+.footer{border-top:1px solid var(--border);padding:10px 24px;display:flex;justify-content:space-between;align-items:center;background:var(--surface);font-size:10px;color:var(--muted)}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.stat-card,.panel,.phase-banner{animation:fadeUp .35s ease both}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="logo-mark">HV</div>
+    <span class="project-title">HVAC <span>Expansion</span> Project</span>
+  </div>
+  <div class="topbar-right">
+    <span class="live-badge"><span class="live-dot"></span> LIVE</span>
+    <span class="current-date" id="currentDate"></span>
+    <button class="edit-toggle" id="editToggle" onclick="toggleEdit()">
+      <span class="edit-indicator"></span> EDIT MODE
+    </button>
+  </div>
+</header>
+
+<!-- TOOLBAR (shown in edit mode) -->
+<div class="toolbar" id="toolbar">
+  <span class="toolbar-label">EDIT MODE</span>
+  <div class="toolbar-sep"></div>
+  <button class="tbtn" onclick="openModal('milestone')">+ Milestone</button>
+  <button class="tbtn" onclick="openModal('risk')">+ Risk</button>
+  <button class="tbtn" onclick="openModal('log')">+ Log Entry</button>
+  <button class="tbtn" onclick="openModal('scope')">+ Scope Area</button>
+  <button class="tbtn" onclick="openModal('team')">+ Team Member</button>
+  <button class="tbtn" onclick="openModal('budget')">+ Budget Line</button>
+  <div class="toolbar-sep"></div>
+  <button class="tbtn success" onclick="exportData()">⬇ Export JSON</button>
+  <button class="tbtn" onclick="document.getElementById('importFile').click()">⬆ Import JSON</button>
+  <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+  <div class="toolbar-sep"></div>
+  <button class="tbtn danger" onclick="resetData()">↺ Reset to Default</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- PHASE BANNER -->
+  <div class="phase-banner">
+    <div class="phase-info">
+      <h2><span data-editable data-key="phaseTitle">Phase 1 — Design &amp; Engineering</span></h2>
+      <p><span data-editable data-key="phaseDesc">Preliminary design, load calculations, vendor selection, and permitting underway</span></p>
+    </div>
+    <div class="phase-meta">
+      <div class="meta-item"><label>Project Start</label><span data-editable data-key="startDate">Jan 2025</span></div>
+      <div class="meta-item"><label>Target Completion</label><span data-editable data-key="endDate">Dec 2027</span></div>
+      <div class="meta-item"><label>Duration</label><span data-editable data-key="duration">3 Years</span></div>
+      <div class="meta-item"><label>Current Phase</label><span data-editable data-key="currentPhase">1 / 4</span></div>
+    </div>
+  </div>
+
+  <!-- STAT CARDS -->
+  <div class="stat-grid">
+    <div class="stat-card blue">
+      <div class="stat-label">Overall Progress</div>
+      <div class="stat-value blue"><span data-editable data-key="overallPct">8</span><span style="font-size:15px">%</span></div>
+      <div class="stat-sub"><span data-editable data-key="overallSub">Design phase active</span></div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-label">Open Action Items</div>
+      <div class="stat-value amber"><span data-editable data-key="openActions">14</span></div>
+      <div class="stat-sub"><span data-editable data-key="openActionsSub">3 overdue</span></div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Milestones Completed</div>
+      <div class="stat-value green" id="msCompletedCount">2</div>
+      <div class="stat-sub"><span data-editable data-key="msTotalSub">of 18 total</span></div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Active Risks</div>
+      <div class="stat-value red" id="activeRiskCount">5</div>
+      <div class="stat-sub"><span data-editable data-key="riskHighSub">2 high priority</span></div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-label">Budget Spent</div>
+      <div class="stat-value amber"><span data-editable data-key="budgetSpent">$207K</span></div>
+      <div class="stat-sub"><span data-editable data-key="budgetTotal">of $8.6M total</span></div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-label">Days to Phase 2</div>
+      <div class="stat-value blue" id="daysToPhase2">—</div>
+      <div class="stat-sub">Target: <span data-editable data-key="phase2Target">1 Apr 2026</span></div>
+    </div>
+  </div>
+
+  <!-- TIMELINE + MILESTONES -->
+  <div class="two-col">
+
+    <!-- TIMELINE -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">⬛ Master Timeline</span>
+        <span class="panel-badge badge-blue" id="timelineYears">2025–2027</span>
+      </div>
+      <div class="timeline-wrap">
+        <div id="timelinePhases"></div>
+        <div class="ring-row" id="ringRow" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px"></div>
+      </div>
+    </div>
+
+    <!-- MILESTONES -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">◆ Key Milestones</span>
+        <span class="panel-badge badge-amber" id="msBadge">18 total</span>
+      </div>
+      <div id="milestoneList" class="milestone-list"></div>
+      <button class="add-row-btn" onclick="openModal('milestone')">+ Add Milestone</button>
+    </div>
+  </div>
+
+  <!-- SCOPE + RISKS -->
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">◈ Scope Areas</span>
+        <span class="panel-badge badge-green" id="scopeBadge">8 zones</span>
+      </div>
+      <div id="scopeGrid" class="scope-grid"></div>
+      <button class="add-row-btn" onclick="openModal('scope')">+ Add Scope Area</button>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">⚠ Risk Register</span>
+        <span class="panel-badge badge-red" id="riskBadge">5 active</span>
+      </div>
+      <div id="riskList" class="risk-list"></div>
+      <button class="add-row-btn" onclick="openModal('risk')">+ Add Risk</button>
+    </div>
+  </div>
+
+  <!-- BUDGET + TEAM -->
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">$ Budget Tracker</span>
+        <span class="panel-badge badge-blue" id="budgetBadge">$8.6M Total</span>
+      </div>
+      <div class="budget-body">
+        <div class="budget-row header">
+          <span>Category</span><span style="text-align:right">Allocated</span><span style="text-align:right">Spent</span><span>Usage</span><span></span>
+        </div>
+        <div id="budgetList"></div>
+      </div>
+      <button class="add-row-btn" onclick="openModal('budget')">+ Add Budget Line</button>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">◉ Project Team</span>
+        <span class="panel-badge badge-blue" id="teamBadge">7 members</span>
+      </div>
+      <div id="teamList" class="team-list"></div>
+      <button class="add-row-btn" onclick="openModal('team')">+ Add Team Member</button>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">▸ Activity Log</span>
+      <span class="panel-badge badge-blue">Recent</span>
+    </div>
+    <div id="logBody" class="log-body"></div>
+    <button class="add-row-btn" onclick="openModal('log')">+ Add Log Entry</button>
+  </div>
+
+</div><!-- /main -->
+
+<!-- FOOTER -->
+<footer class="footer">
+  <span>HVAC EXPANSION PROJECT — COMMAND DASHBOARD v2.0</span>
+  <span id="footerTs"></span>
+  <span>CONFIDENTIAL — INTERNAL USE ONLY</span>
+</footer>
+
+</div><!-- /app -->
+
+<!-- SAVE FLASH -->
+<div class="save-flash" id="saveFlash">✓ SAVED</div>
+
+<!-- ADD MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modalTitle">Add Item</h3>
+    <div id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="mbtn secondary" onclick="closeModal()">Cancel</button>
+      <button class="mbtn primary" onclick="submitModal()">Add</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   DEFAULT DATA
+═══════════════════════════════════════════════ */
+const DEFAULT = {
+  fields:{
+    phaseTitle:"Phase 1 — Design &amp; Engineering",
+    phaseDesc:"Preliminary design, load calculations, vendor selection, and permitting underway",
+    startDate:"Jan 2025",endDate:"Dec 2027",duration:"3 Years",currentPhase:"1 / 4",
+    overallPct:"8",overallSub:"Design phase active",
+    openActions:"14",openActionsSub:"3 overdue",
+    msTotalSub:"of 18 total",riskHighSub:"2 high priority",
+    budgetSpent:"$207K",budgetTotal:"of $8.6M total",
+    phase2Target:"1 Apr 2026"
+  },
+  phases:[
+    {label:"Ph.1 Design",pct:38,state:"active"},
+    {label:"Ph.2 Procurement",pct:0,state:"future"},
+    {label:"Ph.3 Installation",pct:0,state:"future"},
+    {label:"Ph.4 Commissioning",pct:0,state:"future"}
+  ],
+  rings:[
+    {label:"Design Drawings",pct:38,color:"var(--accent)"},
+    {label:"Load Calcs",pct:20,color:"var(--amber)"},
+    {label:"Stakeholder Sign-off",pct:69,color:"var(--green)"},
+    {label:"Permits",pct:0,color:"var(--muted)"}
+  ],
+  milestones:[
+    {icon:"✓",name:"Project Kick-off",sub:"Scope baseline approved",date:"Jan 15, 2025",status:"completed"},
+    {icon:"✓",name:"Site Survey",sub:"All zones assessed",date:"Feb 28, 2025",status:"completed"},
+    {icon:"⟳",name:"Preliminary Design",sub:"Schematics & layout",date:"Jul 31, 2025",status:"in-progress"},
+    {icon:"⟳",name:"Load Calculations",sub:"Cooling & heating loads",date:"Aug 15, 2025",status:"at-risk"},
+    {icon:"◯",name:"Design Review Approval",sub:"Client & engineer sign-off",date:"Oct 01, 2025",status:"upcoming"},
+    {icon:"◯",name:"Permit Application",sub:"BCA & authority approval",date:"Dec 01, 2025",status:"upcoming"},
+    {icon:"◯",name:"Vendor RFQ Issued",sub:"Equipment procurement start",date:"Jan 15, 2026",status:"upcoming"},
+    {icon:"◯",name:"Phase 2 Kickoff",sub:"Procurement & fabrication",date:"Apr 01, 2026",status:"upcoming"}
+  ],
+  scope:[
+    {name:"Chiller Plant",pct:45,color:"var(--accent)",meta:"Design in progress • 2 chillers"},
+    {name:"AHU Replacement",pct:30,color:"var(--amber)",meta:"14 units • Floors 1–7"},
+    {name:"Ductwork",pct:20,color:"var(--accent)",meta:"3,200 LM estimated"},
+    {name:"BMS Integration",pct:10,color:"var(--muted)",meta:"Spec review pending"},
+    {name:"Piping & Insulation",pct:5,color:"var(--muted)",meta:"Route planning stage"},
+    {name:"Controls & Wiring",pct:0,color:"var(--muted)",meta:"Not started"},
+    {name:"Cooling Towers",pct:15,color:"var(--accent2)",meta:"Roof assessment done"},
+    {name:"Commissioning Plan",pct:5,color:"var(--muted)",meta:"Framework drafted"}
+  ],
+  risks:[
+    {level:"high",name:"Long-lead equipment delay",sub:"Chiller units — 28–36 wk lead time",impact:"Schedule"},
+    {level:"high",name:"Permit approval delay",sub:"Authority backlog > 3 months",impact:"Schedule"},
+    {level:"medium",name:"Scope creep — BMS upgrade",sub:"Additional integration requirements",impact:"Cost"},
+    {level:"medium",name:"Asbestos-containing material",sub:"Existing ductwork — floors 2–4",impact:"H&S / Cost"},
+    {level:"low",name:"Design changes post-approval",sub:"Client requirement updates",impact:"Cost"}
+  ],
+  budget:[
+    {cat:"Engineering / Design",allocated:"$620K",spent:"$185K",pct:30},
+    {cat:"Chiller Equipment",allocated:"$2,800K",spent:"$0",pct:0},
+    {cat:"AHU & Accessories",allocated:"$1,400K",spent:"$0",pct:0},
+    {cat:"Ductwork & Piping",allocated:"$1,100K",spent:"$0",pct:0},
+    {cat:"BMS & Controls",allocated:"$850K",spent:"$22K",pct:3},
+    {cat:"Contingency (15%)",allocated:"$1,290K",spent:"$0",pct:0}
+  ],
+  team:[
+    {initials:"PM",name:"Project Manager",role:"Overall delivery & stakeholder management",org:"Owner's Rep",bg:"rgba(0,194,255,.2)",color:"var(--accent)"},
+    {initials:"ME",name:"Lead M&E Engineer",role:"HVAC design authority",org:"Design Consultant",bg:"rgba(245,166,35,.2)",color:"var(--amber)"},
+    {initials:"SE",name:"Structural Engineer",role:"Roof & slab penetrations",org:"Design Consultant",bg:"rgba(34,217,143,.2)",color:"var(--green)"},
+    {initials:"PC",name:"Procurement Coordinator",role:"Vendor & contract management",org:"Owner's Rep",bg:"rgba(255,77,109,.2)",color:"var(--red)"},
+    {initials:"QA",name:"QA / QC Inspector",role:"Quality hold-points & ITPs",org:"Independent",bg:"rgba(0,194,255,.15)",color:"var(--accent2)"},
+    {initials:"FM",name:"Facilities Manager",role:"Operational continuity",org:"Client",bg:"rgba(245,166,35,.15)",color:"var(--amber)"},
+    {initials:"HS",name:"H&S Coordinator",role:"Site safety & compliance",org:"Contractor",bg:"rgba(255,255,255,.1)",color:"var(--text)"}
+  ],
+  log:[
+    {time:"Jun 03, 2025",tag:"design",msg:"Chiller plant schematic (Rev C) issued for internal review by Lead M&E Engineer"},
+    {time:"Jun 01, 2025",tag:"admin",msg:"Permit pre-application meeting scheduled with authority — Aug 12, 2025"},
+    {time:"May 28, 2025",tag:"risk",msg:"Long-lead risk updated to HIGH — chiller lead times confirmed at 32 weeks by vendor"},
+    {time:"May 22, 2025",tag:"scope",msg:"Asbestos management plan commissioned — floors 2–4 ductwork remediation required"},
+    {time:"May 18, 2025",tag:"design",msg:"Load calculation workshop completed — cooling peak 1,840 kW; heating 620 kW"},
+    {time:"May 10, 2025",tag:"admin",msg:"BMS integration scope expanded to include DDC panel replacement on all floors"},
+    {time:"Apr 30, 2025",tag:"design",msg:"Cooling tower structural loading confirmed with Structural Engineer; roof slab adequate"},
+    {time:"Apr 15, 2025",tag:"admin",msg:"Phase 1 design budget increased by $80K for additional energy modelling scope"},
+    {time:"Feb 28, 2025",tag:"scope",msg:"Site survey completed across all 7 floors — as-built drawings issued for review"},
+    {time:"Jan 15, 2025",tag:"admin",msg:"Project kick-off meeting held — scope, programme, and team structure confirmed"}
+  ]
+};
+
+/* ═══════════════════════════════════════════════
+   STATE — load from localStorage or default
+═══════════════════════════════════════════════ */
+function loadState(){
+  try{
+    const raw=localStorage.getItem('hvac_dashboard_v2');
+    return raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(DEFAULT));
+  }catch(e){ return JSON.parse(JSON.stringify(DEFAULT)); }
+}
+let state=loadState();
+
+function saveState(){
+  localStorage.setItem('hvac_dashboard_v2',JSON.stringify(state));
+  flashSave();
+}
+
+function flashSave(){
+  const el=document.getElementById('saveFlash');
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),1800);
+}
+
+/* ═══════════════════════════════════════════════
+   EDIT MODE
+═══════════════════════════════════════════════ */
+let editMode=false;
+function toggleEdit(){
+  editMode=!editMode;
+  document.body.classList.toggle('edit-mode',editMode);
+  const btn=document.getElementById('editToggle');
+  btn.classList.toggle('active',editMode);
+  btn.querySelector('.edit-indicator').style.background=editMode?'var(--accent)':'var(--muted)';
+  document.getElementById('toolbar').classList.toggle('visible',editMode);
+}
+
+/* ═══════════════════════════════════════════════
+   RENDER ALL
+═══════════════════════════════════════════════ */
+function render(){
+  renderFields();
+  renderPhases();
+  renderRings();
+  renderMilestones();
+  renderScope();
+  renderRisks();
+  renderBudget();
+  renderTeam();
+  renderLog();
+  updateCounts();
+}
+
+/* ── EDITABLE TEXT FIELDS ─────────────────────── */
+function renderFields(){
+  document.querySelectorAll('[data-editable][data-key]').forEach(el=>{
+    const key=el.dataset.key;
+    if(state.fields[key]!==undefined) el.innerHTML=state.fields[key];
+    el.setAttribute('contenteditable','false');
+    el.addEventListener('focus',()=>{
+      if(!editMode){el.blur();return;}
+      el.setAttribute('contenteditable','true');
+    });
+    el.addEventListener('click',()=>{
+      if(!editMode) return;
+      el.setAttribute('contenteditable','true');
+      el.focus();
+    });
+    el.addEventListener('blur',()=>{
+      el.setAttribute('contenteditable','false');
+      state.fields[key]=el.innerHTML;
+      saveState();
+    });
+    el.addEventListener('keydown',e=>{
+      if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();el.blur();}
+    });
+  });
+}
+
+/* ── PHASES ───────────────────────────────────── */
+function renderPhases(){
+  const cont=document.getElementById('timelinePhases');
+  cont.innerHTML='';
+  state.phases.forEach((ph,i)=>{
+    const div=document.createElement('div');
+    div.className='t-phase';
+    div.innerHTML=`
+      <span class="t-label">${ph.label}</span>
+      <div class="prog-wrap">
+        ${editMode?`<button class="prog-btn" onclick="adjPct('phases',${i},-5)">−</button>`:''}
+        <div class="prog-bar-bg">
+          <div class="prog-bar-fill ${ph.state}" style="width:${ph.pct}%">${ph.pct>8?ph.pct+'%':''}</div>
+        </div>
+        ${editMode?`<button class="prog-btn" onclick="adjPct('phases',${i},5)">+</button>`:''}
+        <span class="prog-pct" style="color:${ph.state==='active'?'var(--accent)':'var(--text-dim)'}">${ph.pct}%</span>
+      </div>`;
+    cont.appendChild(div);
+  });
+}
+
+function adjPct(list,i,delta){
+  state[list][i].pct=Math.max(0,Math.min(100,state[list][i].pct+delta));
+  if(list==='phases') renderPhases();
+  if(list==='scope') renderScope();
+  if(list==='rings') renderRings();
+  saveState();
+}
+
+/* ── RINGS ────────────────────────────────────── */
+function renderRings(){
+  const cont=document.getElementById('ringRow');
+  cont.innerHTML='';
+  const circ=163.36;
+  state.rings.forEach((r,i)=>{
+    const offset=circ*(1-r.pct/100);
+    const div=document.createElement('div');
+    div.className='ring-item';
+    div.innerHTML=`
+      <svg width="60" height="60" viewBox="0 0 64 64">
+        <circle cx="32" cy="32" r="26" fill="none" stroke="var(--surface2)" stroke-width="6"/>
+        <circle cx="32" cy="32" r="26" fill="none" stroke="${r.color}" stroke-width="6"
+          stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round"/>
+      </svg>
+      <span class="ring-label">${r.label}</span>
+      <span class="ring-val">${r.pct}%</span>
+      ${editMode?`<div style="display:flex;gap:4px;margin-top:2px">
+        <button class="prog-btn" style="display:flex" onclick="adjPct('rings',${i},-5)">−</button>
+        <button class="prog-btn" style="display:flex" onclick="adjPct('rings',${i},5)">+</button>
+      </div>`:''}`;
+    cont.appendChild(div);
+  });
+}
+
+/* ── MILESTONES ───────────────────────────────── */
+const MS_STATUSES=['upcoming','in-progress','at-risk','completed'];
+const MS_LABELS={upcoming:'Upcoming','in-progress':'In Progress','at-risk':'At Risk',completed:'Completed'};
+function renderMilestones(){
+  const cont=document.getElementById('milestoneList');
+  cont.innerHTML='';
+  state.milestones.forEach((ms,i)=>{
+    const row=document.createElement('div');
+    row.className='milestone-row';
+    row.innerHTML=`
+      <span class="ms-icon">${ms.icon}</span>
+      <div>
+        <div class="ms-name" ${editMode?'contenteditable="true"':''} 
+          onblur="updateItem('milestones',${i},'name',this.innerHTML);saveState()"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${ms.name}</div>
+        <div class="ms-sub" ${editMode?'contenteditable="true"':''} 
+          onblur="updateItem('milestones',${i},'sub',this.innerHTML);saveState()"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${ms.sub}</div>
+      </div>
+      <span class="ms-date" ${editMode?'contenteditable="true"':''} 
+        onblur="updateItem('milestones',${i},'date',this.innerHTML);saveState()"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${ms.date}</span>
+      <span class="ms-status ${ms.status}" onclick="cycleStatus('milestones',${i},'status',['upcoming','in-progress','at-risk','completed'])" title="Click to cycle status">${MS_LABELS[ms.status]}</span>
+      <button class="del-btn" onclick="deleteItem('milestones',${i})" title="Delete">×</button>`;
+    cont.appendChild(row);
+  });
+  document.getElementById('msBadge').textContent=state.milestones.length+' total';
+}
+
+/* ── SCOPE ────────────────────────────────────── */
+const SCOPE_COLORS=['var(--accent)','var(--amber)','var(--green)','var(--red)','var(--accent2)','var(--muted)'];
+function renderScope(){
+  const cont=document.getElementById('scopeGrid');
+  cont.innerHTML='';
+  state.scope.forEach((s,i)=>{
+    const div=document.createElement('div');
+    div.className='scope-item';
+    div.innerHTML=`
+      <button class="scope-del" onclick="deleteItem('scope',${i})" title="Delete">×</button>
+      <div class="scope-item-head">
+        <span class="scope-name" ${editMode?'contenteditable="true"':''} 
+          onblur="updateItem('scope',${i},'name',this.innerHTML);saveState()"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${s.name}</span>
+        <span class="scope-pct" style="color:${s.color}">${s.pct}%</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+        ${editMode?`<button class="prog-btn" style="display:flex" onclick="adjScopePct(${i},-5)">−</button>`:''}
+        <div class="scope-bar-bg" style="flex:1"><div class="scope-bar-fill" style="width:${s.pct}%;background:${s.color}"></div></div>
+        ${editMode?`<button class="prog-btn" style="display:flex" onclick="adjScopePct(${i},5)">+</button>`:''}
+      </div>
+      <div class="scope-meta" ${editMode?'contenteditable="true"':''} 
+        onblur="updateItem('scope',${i},'meta',this.innerHTML);saveState()"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${s.meta}</div>`;
+    cont.appendChild(div);
+  });
+  document.getElementById('scopeBadge').textContent=state.scope.length+' zones';
+}
+function adjScopePct(i,delta){
+  state.scope[i].pct=Math.max(0,Math.min(100,state.scope[i].pct+delta));
+  renderScope();saveState();
+}
+
+/* ── RISKS ────────────────────────────────────── */
+const RISK_COLORS={high:'var(--red)',medium:'var(--amber)',low:'var(--green)'};
+function renderRisks(){
+  const cont=document.getElementById('riskList');
+  cont.innerHTML='';
+  state.risks.forEach((r,i)=>{
+    const row=document.createElement('div');
+    row.className='risk-row';
+    row.innerHTML=`
+      <div class="risk-dot" style="background:${RISK_COLORS[r.level]}"></div>
+      <div>
+        <div class="risk-name" ${editMode?'contenteditable="true"':''} 
+          onblur="updateItem('risks',${i},'name',this.innerHTML);saveState()"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${r.name}</div>
+        <div class="risk-sub" ${editMode?'contenteditable="true"':''} 
+          onblur="updateItem('risks',${i},'sub',this.innerHTML);saveState()"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${r.sub}</div>
+      </div>
+      <span class="risk-impact" ${editMode?'contenteditable="true"':''} 
+        onblur="updateItem('risks',${i},'impact',this.innerHTML);saveState()"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${r.impact}</span>
+      <span class="risk-level ${r.level}" onclick="cycleStatus('risks',${i},'level',['low','medium','high'])" title="Click to cycle level">${r.level.toUpperCase()}</span>
+      <button class="del-btn" onclick="deleteItem('risks',${i})" title="Delete">×</button>`;
+    cont.appendChild(row);
+  });
+  document.getElementById('riskBadge').textContent=state.risks.length+' active';
+}
+
+/* ── BUDGET ───────────────────────────────────── */
+function renderBudget(){
+  const cont=document.getElementById('budgetList');
+  cont.innerHTML='';
+  state.budget.forEach((b,i)=>{
+    const row=document.createElement('div');
+    row.className='budget-row';
+    row.innerHTML=`
+      <span class="budget-cat" ${editMode?'contenteditable="true"':''} 
+        onblur="updateItem('budget',${i},'cat',this.innerHTML);saveState()"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${b.cat}</span>
+      <span class="budget-num allocated" ${editMode?'contenteditable="true"':''} 
+        onblur="updateItem('budget',${i},'allocated',this.innerHTML);saveState()"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${b.allocated}</span>
+      <span class="budget-num spent" ${editMode?'contenteditable="true"':''} 
+        onblur="updateItem('budget',${i},'spent',this.innerHTML);saveState()"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${b.spent}</span>
+      <div>
+        <div class="budget-spark"><div class="budget-spark-fill${b.pct>90?' over':''}" style="width:${b.pct}%"></div></div>
+        ${editMode?`<div style="display:flex;gap:3px;margin-top:3px">
+          <button class="prog-btn" style="display:flex;width:18px;height:18px;font-size:11px" onclick="adjBudgetPct(${i},-5)">−</button>
+          <span style="font-size:9px;color:var(--muted);line-height:18px">${b.pct}%</span>
+          <button class="prog-btn" style="display:flex;width:18px;height:18px;font-size:11px" onclick="adjBudgetPct(${i},5)">+</button>
+        </div>`:''}
+      </div>
+      <button class="del-btn" onclick="deleteItem('budget',${i})" title="Delete">×</button>`;
+    cont.appendChild(row);
+  });
+}
+function adjBudgetPct(i,delta){
+  state.budget[i].pct=Math.max(0,Math.min(100,state.budget[i].pct+delta));
+  renderBudget();saveState();
+}
+
+/* ── TEAM ─────────────────────────────────────── */
+function renderTeam(){
+  const cont=document.getElementById('teamList');
+  cont.innerHTML='';
+  const avatarColors=[
+    {bg:"rgba(0,194,255,.2)",color:"var(--accent)"},
+    {bg:"rgba(245,166,35,.2)",color:"var(--amber)"},
+    {bg:"rgba(34,217,143,.2)",color:"var(--green)"},
+    {bg:"rgba(255,77,109,.2)",color:"var(--red)"},
+    {bg:"rgba(0,194,255,.15)",color:"var(--accent2)"},
+    {bg:"rgba(245,166,35,.15)",color:"var(--amber)"},
+    {bg:"rgba(255,255,255,.1)",color:"var(--text)"}
+  ];
+  state.team.forEach((t,i)=>{
+    const ac=avatarColors[i%avatarColors.length];
+    const row=document.createElement('div');
+    row.className='team-row';
+    row.innerHTML=`
+      <div class="team-avatar" style="background:${t.bg||ac.bg};color:${t.color||ac.color}">${t.initials}</div>
+      <div class="team-info">
+        <div class="team-name" ${editMode?'contenteditable="true"':''} 
+          onblur="updateItem('team',${i},'name',this.innerHTML);saveState()"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${t.name}</div>
+        <div class="team-role" ${editMode?'contenteditable="true"':''} 
+          onblur="updateItem('team',${i},'role',this.innerHTML);saveState()"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${t.role}</div>
+      </div>
+      <div class="team-org" ${editMode?'contenteditable="true"':''} 
+        onblur="updateItem('team',${i},'org',this.innerHTML);saveState()"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${t.org}</div>
+      <button class="del-btn" onclick="deleteItem('team',${i})" title="Delete">×</button>`;
+    cont.appendChild(row);
+  });
+  document.getElementById('teamBadge').textContent=state.team.length+' members';
+}
+
+/* ── LOG ──────────────────────────────────────── */
+const LOG_TAGS=['design','admin','scope','risk'];
+function renderLog(){
+  const cont=document.getElementById('logBody');
+  cont.innerHTML='';
+  state.log.forEach((l,i)=>{
+    const entry=document.createElement('div');
+    entry.className='log-entry';
+    entry.innerHTML=`
+      <span class="log-time" ${editMode?'contenteditable="true"':''} 
+        onblur="updateItem('log',${i},'time',this.innerHTML);saveState()"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${l.time}</span>
+      <span class="log-tag ${l.tag}" onclick="cycleStatus('log',${i},'tag',['design','admin','scope','risk'])" title="Click to change tag">${l.tag.toUpperCase()}</span>
+      <span class="log-msg" ${editMode?'contenteditable="true"':''} 
+        onblur="updateItem('log',${i},'msg',this.innerHTML);saveState()"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.blur()}">${l.msg}</span>
+      <button class="del-btn" onclick="deleteItem('log',${i})" title="Delete">×</button>`;
+    cont.appendChild(entry);
+  });
+}
+
+/* ── UPDATE COUNTS ────────────────────────────── */
+function updateCounts(){
+  const comp=state.milestones.filter(m=>m.status==='completed').length;
+  document.getElementById('msCompletedCount').textContent=comp;
+  document.getElementById('activeRiskCount').textContent=state.risks.length;
+}
+
+/* ═══════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════ */
+function updateItem(list,i,key,val){
+  state[list][i][key]=val;
+}
+function deleteItem(list,i){
+  if(!editMode) return;
+  if(!confirm('Delete this item?')) return;
+  state[list].splice(i,1);
+  saveState();render();
+}
+function cycleStatus(list,i,key,options){
+  if(!editMode) return;
+  const cur=state[list][i][key];
+  const idx=options.indexOf(cur);
+  state[list][i][key]=options[(idx+1)%options.length];
+  saveState();render();
+}
+
+/* ═══════════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════════ */
+let _modalType='';
+function openModal(type){
+  _modalType=type;
+  const titles={milestone:'Add Milestone',risk:'Add Risk',log:'Add Log Entry',scope:'Add Scope Area',team:'Add Team Member',budget:'Add Budget Line'};
+  document.getElementById('modalTitle').textContent=titles[type]||'Add';
+  const body=document.getElementById('modalBody');
+  const forms={
+    milestone:`
+      <label>Milestone Name</label><input id="m_name" placeholder="e.g. Design Review Approval">
+      <label>Sub-note</label><input id="m_sub" placeholder="e.g. Client & engineer sign-off">
+      <label>Target Date</label><input id="m_date" placeholder="e.g. Oct 01, 2025">
+      <label>Status</label>
+      <select id="m_status">
+        <option value="upcoming">Upcoming</option>
+        <option value="in-progress">In Progress</option>
+        <option value="at-risk">At Risk</option>
+        <option value="completed">Completed</option>
+      </select>`,
+    risk:`
+      <label>Risk Description</label><input id="r_name" placeholder="e.g. Supply chain disruption">
+      <label>Sub-note</label><input id="r_sub" placeholder="e.g. Procurement delays expected">
+      <label>Impact Area</label><input id="r_impact" placeholder="e.g. Schedule / Cost">
+      <label>Level</label>
+      <select id="r_level"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select>`,
+    log:`
+      <label>Date</label><input id="l_time" placeholder="e.g. Jun 05, 2025">
+      <label>Tag</label>
+      <select id="l_tag"><option value="design">Design</option><option value="admin">Admin</option><option value="scope">Scope</option><option value="risk">Risk</option></select>
+      <label>Message</label><textarea id="l_msg" placeholder="Describe the update…"></textarea>`,
+    scope:`
+      <label>Area Name</label><input id="s_name" placeholder="e.g. Cooling Towers">
+      <label>Progress %</label><input id="s_pct" type="number" min="0" max="100" value="0">
+      <label>Notes</label><input id="s_meta" placeholder="e.g. Roof assessment done">`,
+    team:`
+      <label>Initials (2–3 chars)</label><input id="t_init" placeholder="e.g. PM" maxlength="3">
+      <label>Full Name / Role Title</label><input id="t_name" placeholder="e.g. Project Manager">
+      <label>Responsibilities</label><input id="t_role" placeholder="e.g. Overall delivery">
+      <label>Organisation</label><input id="t_org" placeholder="e.g. Owner's Rep">`,
+    budget:`
+      <label>Category</label><input id="b_cat" placeholder="e.g. Electrical Works">
+      <label>Allocated</label><input id="b_alloc" placeholder="e.g. $500K">
+      <label>Spent</label><input id="b_spent" placeholder="e.g. $0">
+      <label>Usage %</label><input id="b_pct" type="number" min="0" max="100" value="0">`
+  };
+  body.innerHTML=forms[type]||'';
+  document.getElementById('modal').classList.add('open');
+  const firstInput=body.querySelector('input,select,textarea');
+  if(firstInput) setTimeout(()=>firstInput.focus(),80);
+}
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+function submitModal(){
+  const t=_modalType;
+  if(t==='milestone'){
+    state.milestones.push({
+      icon:document.getElementById('m_status').value==='completed'?'✓':'◯',
+      name:document.getElementById('m_name').value||'New Milestone',
+      sub:document.getElementById('m_sub').value||'',
+      date:document.getElementById('m_date').value||'TBD',
+      status:document.getElementById('m_status').value
+    });
+  } else if(t==='risk'){
+    state.risks.push({
+      level:document.getElementById('r_level').value,
+      name:document.getElementById('r_name').value||'New Risk',
+      sub:document.getElementById('r_sub').value||'',
+      impact:document.getElementById('r_impact').value||'—'
+    });
+  } else if(t==='log'){
+    state.log.unshift({
+      time:document.getElementById('l_time').value||new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}),
+      tag:document.getElementById('l_tag').value,
+      msg:document.getElementById('l_msg').value||'New log entry'
+    });
+  } else if(t==='scope'){
+    state.scope.push({
+      name:document.getElementById('s_name').value||'New Area',
+      pct:parseInt(document.getElementById('s_pct').value)||0,
+      color:'var(--accent)',
+      meta:document.getElementById('s_meta').value||''
+    });
+  } else if(t==='team'){
+    state.team.push({
+      initials:document.getElementById('t_init').value.toUpperCase()||'??',
+      name:document.getElementById('t_name').value||'New Member',
+      role:document.getElementById('t_role').value||'',
+      org:document.getElementById('t_org').value||'',
+      bg:'rgba(0,194,255,.15)',color:'var(--accent)'
+    });
+  } else if(t==='budget'){
+    state.budget.push({
+      cat:document.getElementById('b_cat').value||'New Category',
+      allocated:document.getElementById('b_alloc').value||'$0',
+      spent:document.getElementById('b_spent').value||'$0',
+      pct:parseInt(document.getElementById('b_pct').value)||0
+    });
+  }
+  saveState(); render(); closeModal();
+}
+
+/* ═══════════════════════════════════════════════
+   EXPORT / IMPORT / RESET
+═══════════════════════════════════════════════ */
+function exportData(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='hvac-dashboard-backup.json';
+  a.click();
+}
+function importData(evt){
+  const file=evt.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      state=JSON.parse(e.target.result);
+      saveState(); render();
+      alert('Dashboard imported successfully!');
+    }catch(err){ alert('Invalid JSON file.'); }
+  };
+  reader.readAsText(file);
+  evt.target.value='';
+}
+function resetData(){
+  if(!confirm('Reset all data to default? This cannot be undone.')) return;
+  state=JSON.parse(JSON.stringify(DEFAULT));
+  saveState(); render();
+}
+
+/* ═══════════════════════════════════════════════
+   CLOCK
+═══════════════════════════════════════════════ */
+function tick(){
+  const now=new Date();
+  document.getElementById('currentDate').textContent=
+    now.toLocaleDateString('en-GB',{weekday:'short',year:'numeric',month:'short',day:'numeric'}).toUpperCase();
+  document.getElementById('footerTs').textContent=
+    'LAST UPDATED '+now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const target=new Date('2026-04-01');
+  const diff=Math.ceil((target-now)/86400000);
+  const el=document.getElementById('daysToPhase2');
+  if(el) el.textContent=diff>0?diff:'—';
+}
+tick(); setInterval(tick,1000);
+
+/* ═══════════════════════════════════════════════
+   MODAL CLOSE ON OVERLAY CLICK
+═══════════════════════════════════════════════ */
+document.getElementById('modal').addEventListener('click',e=>{
+  if(e.target===document.getElementById('modal')) closeModal();
+});
+
+/* ═══════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════ */
+render();
+</script>
+</body>
+</html>
